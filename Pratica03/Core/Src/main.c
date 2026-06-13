@@ -24,6 +24,10 @@
 #include "usart.h"
 #include "usb_otg.h"
 #include "gpio.h"
+#include "Bsp.h"
+#include "LevelSensor.h"
+#include "usart.h"
+#include <stdio.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -60,6 +64,14 @@ static void MPU_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/* USER CODE BEGIN 0 */
+int __io_putchar(int ch)
+{
+    HAL_UART_Transmit(&huart3,(uint8_t *)&ch,1,HAL_MAX_DELAY);
+
+    return ch;
+}
+/* USER CODE END 0 */
 
 /* USER CODE END 0 */
 
@@ -101,14 +113,21 @@ int main(void)
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
-
+  Bsp_Init();
+  LevelSensor_Init();
+  Bsp_StartTimerInterrupt();
   /* USER CODE END 2 */
-
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
+  while (1){
+	  if(Bsp_IsTimerFlagSet()) {
+	          Bsp_ClearTimerFlag();
+	          LevelSensor_Task();
+	          if(LevelSensor_HasNewResult()){
+	              Bsp_PrintLevel(LevelSensor_GetVoltage(),LevelSensor_GetPercentage());
+	          }
+	      }
+	    /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
@@ -173,6 +192,11 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+    if(htim->Instance == TIM6){
+        Bsp_SetTimerFlag();
+    }
+}
 
 /* USER CODE END 4 */
 
@@ -207,7 +231,7 @@ void MPU_Config(void)
 
 /**
   * @brief  This function is executed in case of error occurrence.
-  * @retval None
+  * @Rightful None
   */
 void Error_Handler(void)
 {
@@ -231,7 +255,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+     ex: prints("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

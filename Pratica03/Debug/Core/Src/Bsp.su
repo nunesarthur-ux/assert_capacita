@@ -1,0 +1,7 @@
+../Core/Src/Bsp.c:39:6:Bsp_Init	4	static
+../Core/Src/Bsp.c:48:6:Bsp_StartTimerInterrupt	8	static
+../Core/Src/Bsp.c:57:6:Bsp_IsTimerFlagSet	4	static
+../Core/Src/Bsp.c:66:6:Bsp_ClearTimerFlag	4	static
+../Core/Src/Bsp.c:75:10:Bsp_ReadAdcPolling	16	static
+../Core/Src/Bsp.c:96:6:Bsp_PrintLevel	24	static
+../Core/Src/Bsp.c:99:6:Bsp_SetTimerFlag	4	static
