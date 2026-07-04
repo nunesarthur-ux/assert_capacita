@@ -1,10 +1,6 @@
 /******************************************************************************
  * @file Button.c
- * @brief Biblioteca responsável pelo controle do botão.
- ******************************************************************************/
-
-/*******************************************************************************
- * INCLUDES
+ * @brief Gerenciamento do botão de usuário com debounce por hardware/timer.
  ******************************************************************************/
 
 #include "Button.h"
@@ -13,62 +9,56 @@
 /*******************************************************************************
  * ESTRUTURAS DE DADOS LOCAIS
  ******************************************************************************/
-
 static struct
 {
-    bool frozen;
-    bool waitingDebounce;
-
-} button;
+    bool isFrozen;      // Estado atual do sistema (true = travado, false = normal)
+    bool awaitingDebounce; // Evita múltiplas interrupções seguidas
+} buttonState;
 
 /*******************************************************************************
  * FUNÇÕES PÚBLICAS
  ******************************************************************************/
 
-/******************************************************************************
- * @brief Inicializa o módulo.
- ******************************************************************************/
 void Button_Init(void)
 {
-    button.frozen = false;
-    button.waitingDebounce = false;
+    buttonState.isFrozen = false;
+    buttonState.awaitingDebounce = false;
 }
 
-/******************************************************************************
- * @brief Atualiza o estado do botão.
- ******************************************************************************/
 void Button_Update(void)
 {
-    /* Verifica se ocorreu uma interrupção do botão */
-    if(Bsp_IsButtonFlag())
+    // 1. Verifica se a interrupção física do botão (EXTI) sinalizou um clique no Bsp
+    if (Bsp_IsButtonFlag())
     {
-        Bsp_ClearButtonFlag();
+        Bsp_ClearButtonFlag(); // Limpa a flag imediatamente
 
-        button.waitingDebounce = true;
+        // Se já estávamos esperando o tempo de debounce acabar, ignora trepidações
+        if (!buttonState.awaitingDebounce)
+        {
+            buttonState.awaitingDebounce = true;
+            Bsp_StartDebounceTimer(); // Dispara o TIM7 (ajustado para uns 50ms)
+        }
     }
 
-    /* Aguarda o término do debounce */
-    if(button.waitingDebounce)
+    // 2. Verifica se o TIM7 terminou de contar o tempo do debounce
+    if (Bsp_IsDebounceFlag())
     {
-        if(Bsp_IsDebounceFlag())
+        Bsp_ClearDebounceFlag(); // Limpa a flag do timer
+
+        // O tempo passou! Vamos ler o pino físico de forma segura para confirmar se foi pressionado
+        if (Bsp_ReadButton() == true)
         {
-            Bsp_ClearDebounceFlag();
-
-            button.waitingDebounce = false;
-
-            /* Confirma se o botão continua pressionado */
-            if(Bsp_ReadButton())
-            {
-                button.frozen = !button.frozen;
-            }
+            // Alterna o estado do sistema (Toggle): se estava ON vira OFF, se estava OFF vira ON
+            buttonState.isFrozen = !buttonState.isFrozen;
         }
+
+        // Libera o botão para receber um novo clique do usuário
+        buttonState.awaitingDebounce = false;
     }
 }
 
-/******************************************************************************
- * @brief Retorna se o sistema está congelado.
- ******************************************************************************/
+// Essa função é chamada no main.c para decidir se atualiza ou não os LEDs/ADC
 bool Button_IsFrozen(void)
 {
-    return button.frozen;
+    return buttonState.isFrozen;
 }

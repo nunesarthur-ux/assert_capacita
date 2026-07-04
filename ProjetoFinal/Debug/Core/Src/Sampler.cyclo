@@ -1,0 +1,5 @@
+../Core/Src/Sampler.c:53:6:Sampler_Init	2
+../Core/Src/Sampler.c:70:6:Sampler_Update	2
+../Core/Src/Sampler.c:87:5:Sampler_GetAverage	1
+../Core/Src/Sampler.c:95:4:Sampler_GetPercentage	1
+../Core/Src/Sampler.c:107:13:Sampler_CalculateAverage	2

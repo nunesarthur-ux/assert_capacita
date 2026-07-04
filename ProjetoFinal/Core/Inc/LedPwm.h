@@ -9,6 +9,7 @@
 /*******************************************************************************
  * INCLUDES NECESSÁRIOS
  ******************************************************************************/
+#include "main.h"
 /*******************************************************************************
 * TIPOS DE DADOS PÚBLICOS
 ******************************************************************************/
@@ -45,5 +46,9 @@ void LedPwm_Update(void);
  * @param led LED selecionado.
  */
 void LedPwm_SetLed(led_t led);
+
+led_t LedPwm_GetSelected(void);
+
+uint8_t LedPwm_GetDuty(led_t led);
 
 #endif /* _LEDPWM_H_ */

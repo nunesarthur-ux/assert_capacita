@@ -121,6 +121,12 @@ bool Bsp_IsSampleFlag(void);
 void Bsp_ClearSampleFlag(void);
 
 /**
+ * @brief: Inicia o Debounce Timer
+ * @retval Nenhum
+ */
+void Bsp_StartDebounceTimer(void);
+
+/**
  * @brief Verifica se o timer de debounce finalizou.
  * @return true quando o timer de debounce finalizar.
  */

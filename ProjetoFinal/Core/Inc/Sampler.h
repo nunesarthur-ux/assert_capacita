@@ -55,8 +55,4 @@ u16 Sampler_GetAverage(void);
  */
 u8 Sampler_GetPercentage(void);
 
-#endif /* _SAMPLER_H_ */
-
-
-
 #endif /* INC_SAMPLER_H_ */

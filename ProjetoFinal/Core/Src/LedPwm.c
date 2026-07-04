@@ -18,6 +18,7 @@ static struct
 {
     led_t selectedLed;
     bool enabled;
+    uint8_t duties[3];
 
 } ledPwm;
 /*******************************************************************************
@@ -64,4 +65,16 @@ void LedPwm_Update(void)
 /******************************************************************************
  * @brief Alterna o estado dos LEDs.
  ******************************************************************************/
+led_t LedPwm_GetSelected(void)
+{
+    return ledPwm.selectedLed;
+}
 
+uint8_t LedPwm_GetDuty(led_t led)
+{
+	if (led >= eLED_1 && led <= eLED_3)
+	    {
+	        return ledPwm.duties[led];
+	    }
+	    return 0; // Retorna o valor atualizado de forma simples
+}

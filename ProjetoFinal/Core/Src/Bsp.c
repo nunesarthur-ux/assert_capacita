@@ -12,6 +12,20 @@
 #include <string.h>
 
 /*******************************************************************************
+ * DECLARAÇÕES EXTERN - INDICAÇÕES DE VARIÁVEISS
+ ******************************************************************************/
+extern ADC_HandleTypeDef hadc1;
+extern TIM_HandleTypeDef htim3; // PWM
+extern TIM_HandleTypeDef htim6; // Amostragem (5ms)
+extern TIM_HandleTypeDef htim7; // Debounce do Botão
+extern UART_HandleTypeDef huart3;
+
+static u8 led1_duty = 0;
+static u8 led2_duty = 0;
+static u8 led3_duty = 0;
+static u32 pwm_counter = 0; // Contador que vai de 0 a 100
+
+/*******************************************************************************
  * DEFINES LOCAIS
  ******************************************************************************/
 
@@ -30,7 +44,7 @@ static struct
     bool sampleFlag;
     bool buttonFlag;
 	bool debounceFlag;
-   bool serialDataReady;
+	bool serialDataReady;
     char serialChar;
 
 } bsp;
@@ -38,8 +52,6 @@ static struct
 /*******************************************************************************
  * PROTÓTIPOS LOCAIS
  ******************************************************************************/
-
-static int DutyToCompare(int duty);
 
 /*******************************************************************************
  * FUNÇÕES PÚBLICAS
@@ -49,15 +61,12 @@ static int DutyToCompare(int duty);
 
 void Bsp_StartAdc(void)
 {
-    HAL_ADC_Start(&hadc1);
+	HAL_ADC_Start(&hadc1);
 }
 
 u16 Bsp_GetAdc(void)
 {
-    HAL_ADC_Start(&hadc1);
-
     HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-
     return HAL_ADC_GetValue(&hadc1);
 }
 
@@ -65,40 +74,23 @@ u16 Bsp_GetAdc(void)
 
 void Bsp_StartPwm(void)
 {
-    /* TODO:
-     * Confirmar timer e canais no CubeMX.
-     */
-
-    HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-    HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
-    HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+	led1_duty = 0;
+	led2_duty = 0;
+	led3_duty = 0;
 }
 
 void Bsp_SetLedDuty(led_t led, u8 duty)
 {
-    int compare;
-
-    if(duty > 100)
-    {
-        duty = 100;
-    }
-
-    compare = DutyToCompare(duty);
-
-    switch(led)
-    {
-        case eLED_1:
-            __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, compare);
-        break;
-
-        case eLED_2:
-            __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, compare);
-        break;
-
-        case eLED_3:
-            __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, compare);
-        break;
-    }
+	if(duty > PWM_MAX) duty = PWM_MAX;
+	    switch(led)
+	    {
+	        case eLED_1: led1_duty = duty;
+	        break;
+	        case eLED_2: led2_duty = duty;
+	        break;
+	        case eLED_3: led3_duty = duty;
+	        break;
+	    }
 }
 
 /*---------------- USART ----------------*/
@@ -110,10 +102,7 @@ void Bsp_StartSerialReception(void)
 
 void Bsp_SendString(char *str)
 {
-    HAL_UART_Transmit(&huart3,
-                      (uint8_t *)str,
-                      strlen(str),
-                      HAL_MAX_DELAY);
+    HAL_UART_Transmit(&huart3,(uint8_t *)str,strlen(str),HAL_MAX_DELAY);
 }
 
 bool Bsp_IsSerialDataReady(void)
@@ -123,18 +112,15 @@ bool Bsp_IsSerialDataReady(void)
 
 char Bsp_GetSerialChar(void)
 {
+	char tmp = bsp.serialChar;
     bsp.serialDataReady = false;
-
-    return bsp.serialChar;
+    return tmp;
 }
 
 /*---------------- BOTÃO ----------------*/
 
 bool Bsp_ReadButton(void)
 {
-    /* TODO:
-     * Alterar porta e pino conforme CubeMX.
-     */
 
     if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET)
     {
@@ -153,16 +139,27 @@ void Bsp_ClearButtonFlag(void)
 {
     bsp.buttonFlag = false;
 }
+bool Bsp_IsDebounceFlag(void)
+{
+    return bsp.debounceFlag;
+}
+
+void Bsp_ClearDebounceFlag(void)
+{
+    bsp.debounceFlag = false;
+}
 
 /*---------------- TIMER ----------------*/
 
 void Bsp_StartSampleTimer(void)
 {
-    /* TODO:
-     * Confirmar timer utilizado para amostragem.
-     */
+    HAL_TIM_Base_Start_IT(&htim6);
+}
 
-    HAL_TIM_Base_Start_IT(&htim2);
+void Bsp_StartDebounceTimer(void)
+{
+	__HAL_TIM_SET_COUNTER(&htim7, 0);
+    HAL_TIM_Base_Start_IT(&htim7); // ADICIONADO: Agora inicia o TIM7 para o debounce
 }
 
 bool Bsp_IsSampleFlag(void)
@@ -174,38 +171,11 @@ void Bsp_ClearSampleFlag(void)
 {
     bsp.sampleFlag = false;
 }
-/******************************************************************************
- * @brief Verifica se o debounce terminou.
- ******************************************************************************/
-bool Bsp_IsDebounceFlag(void)
-{
-    return bsp.debounceFlag;
-}
 
-/******************************************************************************
- * @brief Limpa a flag de debounce.
- ******************************************************************************/
-void Bsp_ClearDebounceFlag(void)
-{
-    bsp.debounceFlag = false;
-}
 
 /*******************************************************************************
  * FUNÇÕES LOCAIS
  ******************************************************************************/
-
-static int DutyToCompare(int duty)
-{
-    int period;
-
-    /* TODO:
-     * Confirmar timer PWM no CubeMX.
-     */
-
-    period = __HAL_TIM_GET_AUTORELOAD(&htim3);
-
-    return (period * duty) / PWM_MAX;
-}
 
 /*******************************************************************************
  * CALLBACKS DA HAL
@@ -213,20 +183,34 @@ static int DutyToCompare(int duty)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 /* Timer de amostragem */
-if(htim->Instance == TIM2)
-{
-bsp.sampleFlag = true;
-}
+	if(htim->Instance == TIM6)
+	{
+		bsp.sampleFlag = true;
+		pwm_counter++;
+		if(pwm_counter >= 5){
+			pwm_counter = 0;
+		}
+		if(led1_duty > pwm_counter)
+	        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);
+		else
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
+		        // Controle do LED 2 (Pino PB7 - Azul)
+		if(led2_duty > pwm_counter)
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
+        else
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
+		        // Controle do LED 3 (Pino PB14 - Vermelho)
+		if(led3_duty > pwm_counter)
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
+        else
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
+	}
 
-/* TODO:
-* Confirmar qual timer será utilizado para o debounce.
-*/
-if(htim->Instance == TIM4)
-{
-bsp.debounceFlag = true;
-
-HAL_TIM_Base_Stop_IT(&htim4);
-}
+	if(htim->Instance == TIM7)
+	{
+		bsp.debounceFlag = true;
+		HAL_TIM_Base_Stop_IT(&htim7);
+	}
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
@@ -246,10 +230,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     if(huart->Instance == USART3)
     {
         bsp.serialDataReady = true;
-
-        HAL_UART_Receive_IT(&huart3,
-                            (uint8_t *)&bsp.serialChar,
-                            1);
+        HAL_UART_Receive_IT(&huart3,(uint8_t *)&bsp.serialChar,1);
     }
 }
 

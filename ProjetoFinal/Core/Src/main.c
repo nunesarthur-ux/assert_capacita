@@ -29,7 +29,7 @@
 #include "LedPwm.h"
 #include "Button.h"
 #include "SerialCmd.h"
-
+#include <stdio.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -113,7 +113,7 @@ int main(void)
   Button_Init();
   SerialCmd_Init();
 
-  Bsp_StartAdc();
+  Bsp_StartPwm();
   Bsp_StartSampleTimer();
   Bsp_StartSerialReception();
 
@@ -121,19 +121,46 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  static uint32_t one_second_counter = 0;
   while (1)
-  {
-	  Button_Update();
+    {
+    /* USER CODE END WHILE */
 
-	  SerialCmd_Update();
+    /* USER CODE BEGIN 3 */
 
-	  if(!Button_IsFrozen()){
-		  if(Bsp_IsSampleFlag()){
-			  Bsp_ClearSampleFlag();
-	          Sampler_Update();
-	          LedPwm_Update();
-	       }
-	  }
+      /* Executa as atualizações de estado do botão e comandos UART continuamente */
+      Button_Update();
+      SerialCmd_Update();
+
+      /* Se a flag de amostragem de 5ms disparar */
+      if (Bsp_IsSampleFlag())
+      {
+        Bsp_ClearSampleFlag();
+        one_second_counter++;
+
+        /* Só atualiza as leituras e o PWM se o botão NÃO congelou o sistema */
+        if (!Button_IsFrozen())
+        {
+          Bsp_StartAdc();    // Dispara nova conversão do ADC
+          Sampler_Update();  // Atualiza média móvel
+          LedPwm_Update();   // Ajusta os LEDs
+        }
+        if (one_second_counter >= 200){
+                one_second_counter = 0; // Reseta o contador de 1 segundo
+                char tx_buffer[150];
+                uint8_t current_val = Sampler_GetPercentage();
+                const char* state_str = Button_IsFrozen() ? "OFF" : "ON";
+                snprintf(tx_buffer, sizeof(tx_buffer),
+                         "VALUE: %d%% || LED1: %d%% aceso || LED2: %d%% aceso || LED3: %d%% aceso || STATE: %s\r\n",
+                         current_val,
+                         (LedPwm_GetSelected() == eLED_1) ? current_val : LedPwm_GetDuty(eLED_1),
+                         (LedPwm_GetSelected() == eLED_2) ? current_val : LedPwm_GetDuty(eLED_2),
+                         (LedPwm_GetSelected() == eLED_3) ? current_val : LedPwm_GetDuty(eLED_3),
+                         state_str);
+                Bsp_SendString(tx_buffer);
+          }
+      }
+    }
   /* USER CODE END 3 */
 }
 

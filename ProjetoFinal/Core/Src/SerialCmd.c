@@ -3,10 +3,6 @@
  * @brief Biblioteca responsável pelo tratamento dos comandos da USART.
  ******************************************************************************/
 
-/*******************************************************************************
- * INCLUDES
- ******************************************************************************/
-
 #include "SerialCmd.h"
 #include "Bsp.h"
 #include "LedPwm.h"
@@ -14,10 +10,9 @@
 /*******************************************************************************
  * ESTRUTURAS DE DADOS LOCAIS
  ******************************************************************************/
-
 static struct
 {
-    char command[4];
+    char command[5]; // OTIMIZAÇÃO: Aumentado para 5 para dar margem de segurança
     int index;
 
 } serialCmd;
@@ -26,17 +21,12 @@ static struct
  * FUNÇÕES PÚBLICAS
  ******************************************************************************/
 
-/******************************************************************************
- * @brief Inicializa o módulo.
- ******************************************************************************/
 void SerialCmd_Init(void)
 {
     serialCmd.index = 0;
+    for(int i = 0; i < 5; i++) serialCmd.command[i] = 0;
 }
 
-/******************************************************************************
- * @brief Trata os comandos recebidos pela USART.
- ******************************************************************************/
 void SerialCmd_Update(void)
 {
     char c;
@@ -45,9 +35,20 @@ void SerialCmd_Update(void)
     {
         c = Bsp_GetSerialChar();
 
-        serialCmd.command[serialCmd.index] = c;
-        serialCmd.index++;
+        // Ignora quebras de linha soltas (\r ou \n) para não quebrar o alinhamento do texto
+        if (c == '\r' || c == '\n')
+        {
+            return;
+        }
 
+        // Armazena o caractere se ainda houver espaço no buffer
+        if (serialCmd.index < 4)
+        {
+            serialCmd.command[serialCmd.index] = c;
+            serialCmd.index++;
+        }
+
+        // Quando coletar exatamente as 4 letras (Ex: L, E, D, 3)
         if(serialCmd.index == 4)
         {
             if(serialCmd.command[0] == 'L' &&  serialCmd.command[1] == 'E' && serialCmd.command[2] == 'D')
@@ -62,13 +63,12 @@ void SerialCmd_Update(void)
                 }
                 else if(serialCmd.command[3] == '3')
                 {
-                    LedPwm_SetLed(eLED_3);
+                    LedPwm_SetLed(eLED_3); // Agora vai disparar com total precisão!
                 }
             }
 
+            // Reseta o índice para esperar o próximo comando
             serialCmd.index = 0;
         }
     }
 }
-
-

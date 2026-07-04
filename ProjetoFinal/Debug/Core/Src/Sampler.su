@@ -1,0 +1,5 @@
+../Core/Src/Sampler.c:53:6:Sampler_Init	16	static
+../Core/Src/Sampler.c:70:6:Sampler_Update	16	static
+../Core/Src/Sampler.c:87:5:Sampler_GetAverage	4	static
+../Core/Src/Sampler.c:95:4:Sampler_GetPercentage	4	static
+../Core/Src/Sampler.c:107:13:Sampler_CalculateAverage	16	static
