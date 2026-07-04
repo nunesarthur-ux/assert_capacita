@@ -24,6 +24,12 @@
 #include "usart.h"
 #include "usb_otg.h"
 #include "gpio.h"
+#include "Bsp.h"
+#include "Sampler.h"
+#include "LedPwm.h"
+#include "Button.h"
+#include "SerialCmd.h"
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -102,6 +108,14 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
+  Sampler_Init();
+  LedPwm_Init();
+  Button_Init();
+  SerialCmd_Init();
+
+  Bsp_StartAdc();
+  Bsp_StartSampleTimer();
+  Bsp_StartSerialReception();
 
   /* USER CODE END 2 */
 
@@ -109,10 +123,17 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
+	  Button_Update();
 
-    /* USER CODE BEGIN 3 */
-  }
+	  SerialCmd_Update();
+
+	  if(!Button_IsFrozen()){
+		  if(Bsp_IsSampleFlag()){
+			  Bsp_ClearSampleFlag();
+	          Sampler_Update();
+	          LedPwm_Update();
+	       }
+	  }
   /* USER CODE END 3 */
 }
 
