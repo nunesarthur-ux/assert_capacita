@@ -17,6 +17,7 @@
 static struct
 {
     led_t selectedLed;
+    bool enabled;
 
 } ledPwm;
 /*******************************************************************************
@@ -38,7 +39,7 @@ void LedPwm_Init(void)
 ******************************************************************************/
 void LedPwm_SetLed(led_t led)
 {
-ledPwm.selectedLed = led;
+	ledPwm.selectedLed = led;
 }
 
 /******************************************************************************
@@ -57,9 +58,7 @@ void LedPwm_Update(void)
         brightness = 0;
     }
 
-    Bsp_SetLedDuty(eLED_1, brightness);
-    Bsp_SetLedDuty(eLED_2, brightness);
-    Bsp_SetLedDuty(eLED_3, brightness);
+    Bsp_SetLedDuty(ledPwm.selectedLed,brightness);
 }
 
 /******************************************************************************
